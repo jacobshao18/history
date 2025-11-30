@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <title>中国历史地名交互地图 · Demo</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <!-- Leaflet 地图 -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <style>
+    :root {
+      --bg: #020617;
+      --bg-soft: #0b1120;
+      --card-bg: #020617;
+      --accent: #38bdf8;
+      --accent-soft: rgba(56, 189, 248, 0.12);
+      --text-main: #e5e7eb;
+      --text-muted: #9ca3af;
+      --border: #1f2937;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, system-ui, "SF Pro Text",
+        "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: radial-gradient(circle at top, #020617 0, #000 60%);
+      color: var(--text-main);
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    /* 顶部导航 */
+    .navbar {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      backdrop-filter: blur(14px);
+      background: linear-gradient(
+        to bottom,
+        rgba(15, 23, 42, 0.96),
+        rgba(15, 23, 42, 0.7)
+      );
+      border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+    }
+
+    .nav-inner {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 0.6rem 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+
+    .nav-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+
+    .logo-badge {
+      width: 32px;
+      height: 32px;
+      border-radius: 999px;
+      background: radial-gradient(circle at 30% 20%, #38bdf8, #6366f1);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #0b1120;
+      box-shadow: 0 0 18px rgba(56, 189, 248, 0.7);
+    }
+
+    .brand-text-main {
+      font-weight: 600;
+      letter-spacing: 0.03em;
+    }
+    .brand-text-sub {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .nav-cta {
+      padding: 0.3rem 0.8rem;
+      border-radius: 999px;
+      font-size: 0.78rem;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: radial-gradient(circle at top, rgba(56,189,248,0.14), transparent);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .page {
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 1.2rem 1rem 2rem;
+    }
+
+    /* 顶部说明 + 输入框 */
+    .hero {
+      margin-bottom: 1rem;
+    }
+
+    .hero-title {
+      font-size: clamp(1.6rem, 3vw, 2.1rem);
+      margin: 0 0 0.4rem;
+      line-height: 1.2;
+    }
+
+    .hero-gradient {
+      background: radial-gradient(circle at 10% 0, #38bdf8, #a855f7 45%, #f97316);
+      -webkit-background-clip: text;
+      color: transparent;
+    }
+
+    .hero-subtitle {
+      font-size: 0.9rem;
+      color: var(--text-muted);
+      max-width: 48rem;
+      line-height: 1.6;
+      margin-bottom: 0.8rem;
+    }
+
+    .search-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.6rem;
+      align-items: center;
+      margin-bottom: 0.4rem;
+    }
+
+    .search-input-wrap {
+      flex: 1;
+      min-width: 180px;
+      position: relative;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 0.55rem 0.9rem 0.55rem 2.2rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.35);
+      background: rgba(15, 23, 42, 0.9);
+      color: var(--text-main);
+      font-size: 0.9rem;
+      outline: none;
+    }
+
+    .search-input::placeholder {
+      color: #6b7280;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 0.75rem;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.9rem;
+      color: #6b7280;
+    }
+
+    .search-btn {
+      padding: 0.52rem 1.1rem;
+      border-radius: 999px;
+      border: none;
+      background: linear-gradient(to right, #38bdf8, #6366f1);
+      color: #0b1120;
+      font-size: 0.9rem;
+      font-weight: 500;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(37, 99, 235, 0.55);
+      white-space: nowrap;
+    }
+
+    .search-hint {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+
+    .search-hint code {
+      background: rgba(15,23,42,0.9);
+      border-radius: 999px;
+      padding: 0.08rem 0.45rem;
+      border: 1px solid rgba(148,163,184,0.3);
+      font-size: 0.75rem;
+    }
+
+    /* 主布局：左地图右信息 */
+    .main-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+      gap: 1rem;
+      margin-top: 0.6rem;
+    }
+
+    @media (max-width: 900px) {
+      .main-grid {
+        grid-template-columns: minmax(0, 1fr);
+      }
+    }
+
+    .panel {
+      background: var(--card-bg);
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.25);
+      padding: 0.8rem 0.9rem 0.9rem;
+      display: flex;
+      flex-direction: column;
+      min-height: 280px;
+    }
+
+    .panel-title {
+      font-size: 0.95rem;
+      font-weight: 600;
+      margin-bottom: 0.15rem;
+    }
+
+    .panel-subtitle {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-bottom: 0.6rem;
+    }
+
+    .panel-body {
+      flex: 1;
+      position: relative;
+      min-height: 260px;
+    }
+
+    #map {
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    /* 信息面板 */
+    .info-item {
+      margin-bottom: 0.6rem;
+    }
+
+    .info-label {
+      font-size: 0.78rem;
+      color: #9ca3af;
+      margin-bottom: 0.1rem;
+    }
+
+    .info-value {
+      font-size: 0.9rem;
+    }
+
+    .info-badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.35rem;
+      margin-top: 0.35rem;
+    }
+
+    .info-badge {
+      font-size: 0.78rem;
+      padding: 0.2rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.4);
+      background: rgba(15,23,42,0.9);
+      color: var(--text-muted);
+    }
+
+    .info-events {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+      padding-left: 1.1rem;
+    }
+
+    .info-events li {
+      margin-bottom: 0.2rem;
+    }
+
+    .info-empty {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.6;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      border-top: 1px solid rgba(15,23,42,0.9);
+      padding-top: 0.45rem;
+      margin-top: 0.5rem;
+    }
+
+    .dot-led {
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.7);
+    }
+
+    .footer {
+      margin-top: 1.6rem;
+      padding-top: 0.9rem;
+      border-top: 1px solid rgba(15, 23, 42, 0.9);
+      font-size: 0.74rem;
+      color: var(--text-muted);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    .footer a {
+      color: var(--text-muted);
+    }
+
+    .footer a:hover {
+      color: #e5e7eb;
+    }
+  </style>
+</head>
+<body>
+  <!-- 顶部导航 -->
+  <header class="navbar">
+    <div class="nav-inner">
+      <div class="nav-left">
+        <div class="logo-badge">史</div>
+        <div>
+          <div class="brand-text-main">中国历史地名交互地图</div>
+          <div class="brand-text-sub">地址 → 地图 → 历史别称与事件</div>
+        </div>
+      </div>
+      <div class="nav-cta">
+        静态网页 · 可部署到 GitHub Pages
+      </div>
+    </div>
+  </header>
+
+  <main class="page">
+    <!-- 说明 + 搜索 -->
+    <section class="hero">
+      <h1 class="hero-title">
+        输入一个<span class="hero-gradient">中国地址或城市</span>，
+        看看它在历史上叫什么、发生过什么大事。
+      </h1>
+      <p class="hero-subtitle">
+        这是一个用于演示的前端静态页面：不依赖后端服务，只使用内置数据。
+        你可以输入如 <strong>“北京” “西安” “南京市玄武区” “洛阳龙门”</strong> 等，
+        程序会在内置的城市/历史地名表中模糊匹配，移动地图并展示历史信息。
+      </p>
+
+      <div class="search-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon">🔍</span>
+          <input
+            id="placeInput"
+            class="search-input"
+            type="text"
+            placeholder="请输入城市或地址，例如：北京中关村、西安雁塔区、南京、洛阳龙门……"
+          />
+        </div>
+        <button class="search-btn" onclick="handleSearch()">
+          查找历史地名与事件
+        </button>
+      </div>
+      <div class="search-hint">
+        当前内置示例城市：<code>北京</code> <code>洛阳</code> <code>西安</code>
+        <code>南京</code> <code>开封</code> <code>杭州</code> <code>广州</code> <code>成都</code>；
+        你可以在脚本中的 <code>places</code> 数组继续补充。
+      </div>
+    </section>
+
+    <!-- 主布局：左地图右信息 -->
+    <section class="main-grid">
+      <!-- 地图面板 -->
+      <article class="panel">
+        <div class="panel-title">地图视图</div>
+        <div class="panel-subtitle">
+          默认视角为“中国全图”。当你输入的地址匹配到内置城市后，地图会自动飞到对应位置并打上标记。
+        </div>
+        <div class="panel-body">
+          <div id="map"></div>
+        </div>
+        <div class="status-bar" id="mapStatus">
+          <div class="dot-led"></div>
+          <span>状态：等待输入，当前视角为中国大致范围。</span>
+        </div>
+      </article>
+
+      <!-- 信息面板 -->
+      <aside class="panel">
+        <div class="panel-title">历史地名与事件</div>
+        <div class="panel-subtitle">
+          根据你输入的地址 / 地名，在内置数据中查找对应城市或历史别称，并展示概要信息。
+        </div>
+
+        <div id="infoContainer">
+          <p class="info-empty">
+            ⬅ 试着在左上方输入框内键入「北京」「长安」「金陵」「汴梁」「临安」等试验。
+            这里会展示该地的：<br>
+            · 现用名称与大致位置<br>
+            · 历史别称（州府、旧都、古称等）<br>
+            · 不同朝代下的角色与几件代表性历史事件
+          </p>
+        </div>
+      </aside>
+    </section>
+
+    <!-- 页脚 -->
+    <footer class="footer">
+      <div>© <span id="year"></span> 中国历史地名交互地图 · Demo 页面</div>
+      <div>
+        <a href="javascript:scrollToTop()">返回顶部</a>
+      </div>
+    </footer>
+  </main>
+
+  <script>
+    // === 简单的数据模型：可以在这里不断补充城市 ===
+    // 每个条目包含：现名、别称数组、坐标、区域、简要说明、若干历史事件
+    const places = [
+      {
+        name: "北京",
+        aliases: ["北京","燕京","蓟","幽州","大都","顺天府","北平"],
+        coord: [39.9042, 116.4074],
+        region: "华北 · 首都圈",
+        summary: "自元代以来长期作为全国政治中心，先后为元大都、明清北京以及中华民国北平、新中国首都所在地。",
+        events: [
+          "战国时期属燕国，称蓟，是燕国都城之一。",
+          "唐代为幽州，安史之乱爆发后成为重要藩镇重地。",
+          "元世祖忽必烈定都于此，称“大都”，开启连续数百年全国性都城地位。",
+          "明永乐年间迁都，正式成为明清两代首都。",
+          "1912–1949 年间以“北平”之名存在，1949 年后定名“北京”。"
+        ]
+      },
+      {
+        name: "洛阳",
+        aliases: ["洛阳","洛邑","神都","东都","河南府"],
+        coord: [34.6197, 112.4540],
+        region: "华中 · 黄河中游",
+        summary: "中国历史上的“九朝古都”之一，多朝在此建都，与长安并称“二京”。",
+        events: [
+          "周成王、周康王在此建都，称“洛邑”，与镐京并称“两京”。",
+          "东汉光武帝刘秀定都洛阳，此后成为东汉政治文化中心。",
+          "隋炀帝、唐中宗均曾在洛阳大规模营建宫室、苑囿，唐代称“东都洛阳”。",
+          "北魏孝文帝迁都洛阳后，推行汉化改革，使洛阳成为当时国际性大都会。"
+        ]
+      },
+      {
+        name: "西安",
+        aliases: ["西安","长安","镐京","京兆","大兴城"],
+        coord: [34.3416, 108.9398],
+        region: "西北 · 关中平原",
+        summary: "十三朝古都，中国古代都城中历史最悠久、建都朝代最多的城市之一，古称长安。",
+        events: [
+          "西周在镐京建都，奠定关中地区“天府之国”的地位。",
+          "西汉高祖刘邦定都长安，此后成为汉帝国政治经济中心。",
+          "隋文帝营建大兴城，唐代在此基础上扩建为长安城，是当时世界上最大的城市之一。",
+          "唐玄宗时期长安人口达到百万，成为丝绸之路的起点与国际文化交流中心。"
+        ]
+      },
+      {
+        name: "南京",
+        aliases: ["南京","建康","建邺","石头城","金陵","江宁府"],
+        coord: [32.0603, 118.7969],
+        region: "华东 · 长江下游",
+        summary: "中国历史上的重要都城与门户城市，六朝、明初以及近现代多次定都于此。",
+        events: [
+          "东吴孙权在此建都，称“建业”，是三国时期江东政权中心。",
+          "东晋及南朝宋齐梁陈先后定都，形成所谓“六朝古都”。",
+          "明太祖朱元璋在此定都，建南京城与明故宫，后迁都北京。",
+          "近代以来先后作为太平天国天京、中华民国首都以及抗战时期重要政治中心。"
+        ]
+      },
+      {
+        name: "开封",
+        aliases: ["开封","汴梁","汴京","东京","汴州"],
+        coord: [34.7973, 114.3076],
+        region: "华中 · 黄河中下游",
+        summary: "北宋东京城所在地，曾是当时世界上人口与经济最繁荣的都城之一。",
+        events: [
+          "五代后晋、后汉、后周曾在此建都，为中原割据政权中心。",
+          "北宋太祖赵匡胤定都汴梁，称“东京开封府”，形成“汴京繁华”。",
+          "《清明上河图》所描绘的正是北宋东京汴梁的城市生活场景。",
+          "靖康之变后，金兵攻陷东京，北宋灭亡，成为中华史上重大转折。"
+        ]
+      },
+      {
+        name: "杭州",
+        aliases: ["杭州","临安","钱塘","杭州府"],
+        coord: [30.2741, 120.1551],
+        region: "华东 · 江南水乡",
+        summary: "南宋行在临安所在地，唐宋以来重要的江南商贸与文化中心。",
+        events: [
+          "唐代设杭州，因钱塘江而兴，成为江南运河枢纽。",
+          "五代吴越国在此建都，发展水利与佛教文化。",
+          "南宋高宗赵构定都临安（今杭州），形成“山外青山楼外楼，西湖歌舞几时休”的都城景象。",
+          "元明清时期继续作为江南重镇，海上丝绸之路与内河交通的重要节点。"
+        ]
+      },
+      {
+        name: "广州",
+        aliases: ["广州","番禺","南海郡","广府"],
+        coord: [23.1291, 113.2644],
+        region: "华南 · 海上丝绸之路起点之一",
+        summary: "中国最早开放的对外通商口岸之一，自唐宋以来便是海上丝绸之路的重要节点。",
+        events: [
+          "秦始皇统一岭南后于此设南海郡，郡治番禺。",
+          "唐代设市舶司，成为对外贸易最重要港口之一，阿拉伯与波斯商人云集。",
+          "清代“广州十三行”时期，长期作为对西方贸易唯一合法港口。",
+          "近代以来在辛亥革命、民主革命运动中都扮演了重要角色。"
+        ]
+      },
+      {
+        name: "成都",
+        aliases: ["成都","益州","锦官城","芙蓉城"],
+        coord: [30.6586, 104.0648],
+        region: "西南 · 成都平原",
+        summary: "自古“天府之国”的核心城市之一，政治、经济与文化地位突出。",
+        events: [
+          "战国蜀国在此建都，李冰父子修都江堰，使成都平原水利发达。",
+          "西汉时期为益州治所，成为西南交通枢纽。",
+          "三国时期刘备在成都称汉中王，后建蜀汉政权。",
+          "唐宋以来为西南重镇，茶马古道与丝绸之路南线的重要节点。"
+        ]
+      }
+    ];
+
+    // === 地图初始化 ===
+    let map;
+    let currentMarker = null;
+
+    function initMap() {
+      const mapEl = document.getElementById("map");
+      if (!mapEl) return;
+
+      map = L.map("map", {
+        zoomControl: true
+      }).setView([35, 103], 4); // 中国大致中心
+
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 18,
+        attribution: "&copy; OpenStreetMap contributors"
+      }).addTo(map);
+    }
+
+    // === 搜索 & 匹配逻辑 ===
+    function handleSearch() {
+      const inputEl = document.getElementById("placeInput");
+      const statusEl = document.getElementById("mapStatus");
+      const infoEl = document.getElementById("infoContainer");
+      if (!inputEl || !statusEl || !infoEl) return;
+
+      const raw = inputEl.value.trim();
+      if (!raw) {
+        infoEl.innerHTML =
+          '<p class="info-empty">请先在上方输入一个中国的城市或地址，例如：<strong>北京中关村、西安雁塔区、南京、洛阳龙门</strong>。</p>';
+        statusEl.innerHTML =
+          '<div class="dot-led"></div><span>状态：未输入地址，当前仍为中国全图视角。</span>';
+        return;
+      }
+
+      // 模糊匹配：看输入字符串中是否包含某个别称，或某个别称包含输入
+      const keyword = raw.replace(/\s+/g, "");
+      let match = null;
+
+      for (const p of places) {
+        if (p.aliases.some(a => keyword.includes(a) || a.includes(keyword))) {
+          match = p;
+          break;
+        }
+      }
+
+      if (!match) {
+        infoEl.innerHTML =
+          '<p class="info-empty">暂未在内置数据中找到与 <strong>' +
+          raw +
+          "</strong> 对应的历史地名信息。<br>你可以：<br>· 换一个更“粗”的地名（如城市名）；<br>· 或者在脚本的 <code>places</code> 数组中自行添加该地址的历史资料。</p>";
+        statusEl.innerHTML =
+          '<div class="dot-led" style="background:#f97316;box-shadow:0 0 8px rgba(248,113,113,0.8)"></div>' +
+          '<span>状态：未命中内置城市数据，地图保持当前视角。</span>';
+        return;
+      }
+
+      // 更新地图位置
+      if (map) {
+        map.flyTo(match.coord, 7, { duration: 0.8 });
+
+        if (currentMarker) {
+          currentMarker.remove();
+        }
+
+        currentMarker = L.marker(match.coord).addTo(map)
+          .bindPopup("<b>" + match.name + "</b><br/>" + match.region)
+          .openPopup();
+      }
+
+      // 更新状态栏
+      statusEl.innerHTML =
+        '<div class="dot-led"></div>' +
+        '<span>状态：已定位到 <strong>' +
+        match.name +
+        "</strong>，视角已移动到其大致位置。</span>";
+
+      // 更新信息面板
+      const aliasBadges = match.aliases
+        .map(a => '<span class="info-badge">' + a + "</span>")
+        .join("");
+
+      const eventsList = match.events
+        .map(e => "<li>" + e + "</li>")
+        .join("");
+
+      infoEl.innerHTML = `
+        <div class="info-item">
+          <div class="info-label">现用名称</div>
+          <div class="info-value"><strong>${match.name}</strong></div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-label">历史别称 / 相关地名</div>
+          <div class="info-badge-row">
+            ${aliasBadges}
+          </div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-label">大致区域</div>
+          <div class="info-value">${match.region}</div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-label">历史地位概览</div>
+          <div class="info-value" style="font-size:0.85rem;color:${getMutedColor()}">
+            ${match.summary}
+          </div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-label">若干代表性历史事件 / 情景示例</div>
+          <ul class="info-events">
+            ${eventsList}
+          </ul>
+        </div>
+      `;
+    }
+
+    function getMutedColor() {
+      return "#9ca3af";
+    }
+
+    // 回车键触发查询
+    document.addEventListener("DOMContentLoaded", function () {
+      const inputEl = document.getElementById("placeInput");
+      if (inputEl) {
+        inputEl.addEventListener("keydown", function (e) {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            handleSearch();
+          }
+        });
+      }
+
+      // 初始化地图 & 年份
+      initMap();
+      const yearEl = document.getElementById("year");
+      if (yearEl) yearEl.textContent = new Date().getFullYear();
+    });
+
+    // 返回顶部
+    function scrollToTop() {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  </script>
+</body>
+</html>
